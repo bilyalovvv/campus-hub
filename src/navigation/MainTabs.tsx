@@ -2,6 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View } from 'react-native';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import { MainTabParamList } from '../types/navigation';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -20,6 +21,7 @@ export function MainTabs() {
       <Tab.Screen name="Home" component={HomeScreen as any} options={{ title: 'Басты бет' }} />
       <Tab.Screen name="Services" component={ServicesPlaceholder} options={{ title: 'Сервистер' }} />
       <Tab.Screen name="Profile" component={ProfileScreen as any} options={{ title: 'Профиль' }} />
+      <Tab.Screen name="Settings" component={SettingsScreen as any} options={{ title: 'Баптаулар' }} /> 
     </Tab.Navigator>
   );
 }

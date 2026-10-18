@@ -1,7 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -14,6 +14,35 @@ import {
   View
 } from 'react-native';
 
+type ThemeType = 'light' | 'dark';
+type FontScaleType = 'small' | 'normal' | 'large';
+
+const SettingsContext = createContext({
+  theme: 'light' as ThemeType,
+  toggleTheme: () => {},
+  fontScale: 'normal' as FontScaleType,
+  setFontScale: (scale: FontScaleType) => {},
+});
+
+function SettingsProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setTheme] = useState<ThemeType>('light');
+  const [fontScale, setFontScale] = useState<FontScaleType>('normal');
+
+  const toggleTheme = () => setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+
+  const colors = theme === 'light' 
+    ? { background: '#F4F8FC', cardBg: '#FFFFFF', text: '#092B55', subText: '#60758A', primary: '#0B66E4' }
+    : { background: '#121212', cardBg: '#1E1E1E', text: '#FFFFFF', subText: '#A0A0A0', primary: '#3B82F6' };
+
+  return (
+    <SettingsContext.Provider value={{ theme, toggleTheme, fontScale, setFontScale, colors } as any}>
+      {children}
+    </SettingsContext.Provider>
+  );
+}
+
+const useSettings = () => useContext(SettingsContext);
+
 export type RootStackParamList = {
   Login: undefined;
   Main: undefined;
@@ -21,12 +50,14 @@ export type RootStackParamList = {
     serviceId: string;
     title: string;
   };
+  Settings: undefined;
 };
 
 export type MainTabParamList = {
   Home: undefined;
   Services: undefined;
   Profile: undefined;
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -86,61 +117,81 @@ function LoginScreen({ navigation }: any) {
   );
 }
 
-
 function HomeScreen({ navigation }: any) {
+  const { colors, fontScale }: any = useSettings();
+  const titleSize = fontScale === 'small' ? 22 : fontScale === 'large' ? 30 : 26;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.welcome}>Қош келдіңіз!</Text>
-        <Text style={styles.title}>Кампус сервистері</Text>
-        <Text style={styles.subtitle}>Толығырақ көру үшін басыңыз</Text>
+        <Text style={[styles.welcome, { color: colors.primary }]}>Қош келдіңіз, студент!</Text>
+        <Text style={[styles.title, { color: colors.text, fontSize: titleSize }]}>Кампус сервистері мен жаңалықтар</Text>
+        <Text style={[styles.subtitle, { color: colors.subText }]}>Толығырақ оқу үшін карточканы басыңыз</Text>
 
         <Pressable 
-          style={styles.cardButton}
-          onPress={() => navigation.navigate('Details', { serviceId: 'lib-01', title: 'Кітапхана' })}
+          style={[styles.cardButton, { backgroundColor: colors.cardBg }]}
+          onPress={() => navigation.navigate('Details', { serviceId: 'lib-01', title: 'Кітапхана қызметі' })}
         >
-          <Text style={styles.cardTitle}>📖 Кітапхана</Text>
-          <Text style={styles.cardDesc}>Оқу залдары мен электронды каталог</Text>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>Кітапхана қоры және оқу залдары</Text>
+          <Text style={[styles.cardDesc, { color: colors.subText }]}>Жұмыс уақыты: 09:00 - 20:00. Қолда 15 000-нан астам оқулықтар мен электронды базалар қолжетімді.</Text>
         </Pressable>
 
         <Pressable 
-          style={styles.cardButton}
-          onPress={() => navigation.navigate('Details', { serviceId: 'sch-02', title: 'Сабақ кестесі' })}
+          style={[styles.cardButton, { backgroundColor: colors.cardBg }]}
+          onPress={() => navigation.navigate('Details', { serviceId: 'sch-02', title: 'Академиялық кесте' })}
         >
-          <Text style={styles.cardTitle}>📅 Сабақ кестесі</Text>
-          <Text style={styles.cardDesc}>Аудиториялар мен оқытушылар</Text>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>Сабақтар кестесі мен аудиториялар</Text>
+          <Text style={[styles.cardDesc, { color: colors.subText }]}>Ағымдағы семестрдің дәріс және тәжірибелік сабақтарының кестесі жаңартылды.</Text>
+        </Pressable>
+
+        <Pressable 
+          style={[styles.cardButton, { backgroundColor: colors.cardBg }]}
+          onPress={() => navigation.navigate('Details', { serviceId: 'dorm-03', title: 'Жатқана хабарламасы' })}
+        >
+          <Text style={[styles.cardTitle, { color: colors.text }]}>Студенттер үйі (Жатқана)</Text>
+          <Text style={[styles.cardDesc, { color: colors.subText }]}>Тіркелу шарттары, төлем ақы және коменданттык сағат ережелерімен танысыңыз.</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-
 function ServicesScreen({ navigation }: any) {
+  const { colors }: any = useSettings();
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <Text style={styles.title}>Барлық сервистер</Text>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={[styles.title, { color: colors.text }]}>Қосымша сервистер</Text>
+        
         <Pressable 
-          style={styles.cardButton}
-          onPress={() => navigation.navigate('Details', { serviceId: 'trans-03', title: 'Көлік және логистика' })}
+          style={[styles.cardButton, { backgroundColor: colors.cardBg }]}
+          onPress={() => navigation.navigate('Details', { serviceId: 'trans-03', title: 'Кампус автобусы' })}
         >
-          <Text style={styles.cardTitle}>🚌 Кампус автобусы</Text>
-          <Text style={styles.cardDesc}>Маршруттар мен кесте</Text>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>Кампус аралық автобус</Text>
+          <Text style={[styles.cardDesc, { color: colors.subText }]}>№1 және №4 маршруттар әр 15 минут сайын бас корпус пен жатқана арасында қатынаиды.</Text>
         </Pressable>
-      </View>
+
+        <Pressable 
+          style={[styles.cardButton, { backgroundColor: colors.cardBg }]}
+          onPress={() => navigation.navigate('Details', { serviceId: 'med-04', title: 'Медициналық пункт' })}
+        >
+          <Text style={[styles.cardTitle, { color: colors.text }]}>Студенттік емхана</Text>
+          <Text style={[styles.cardDesc, { color: colors.subText }]}>№3 корпус, 102 кабинет. Алғашқы медициналық көмек және анықтамалар беру.</Text>
+        </Pressable>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
-
 function ProfileScreen({ navigation }: any) {
+  const { colors }: any = useSettings();
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.container}>
-        <Text style={styles.title}>Студент Профилі</Text>
-        <Text style={styles.subtitle}>Аты-жөні: Әлемжан Б.</Text>
-        <Text style={styles.subtitle}>Тобы: УС-ПИ-25-1к</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Студент Профилі</Text>
+        <Text style={[styles.subtitle, { color: colors.subText }]}>Аты-жөні: Әлемжан Б.</Text>
+        <Text style={[styles.subtitle, { color: colors.subText }]}>Тобы: УС-ПИ-25-1к</Text>
+        <Text style={[styles.subtitle, { color: colors.subText }]}>Электронды пошта: alemzhan.b@university.edu</Text>
 
         <Pressable 
           style={styles.logoutButton} 
@@ -153,15 +204,72 @@ function ProfileScreen({ navigation }: any) {
   );
 }
 
+function SettingsScreen() {
+  const { theme, toggleTheme, fontScale, setFontScale, colors }: any = useSettings();
+
+  return (
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <View style={styles.container}>
+        <Text style={[styles.title, { color: colors.text }]}>Қолданба баптаулары</Text>
+
+        <View style={[styles.settingRow, { backgroundColor: colors.cardBg }]}>
+          <Text style={[styles.settingLabel, { color: colors.text }]}>Қараңғы тақырып (Dark Theme)</Text>
+          <Pressable style={[styles.smallBtn, { backgroundColor: colors.primary }]} onPress={toggleTheme}>
+            <Text style={styles.buttonText}>{theme === 'light' ? 'Қосу' : 'Өшіру'}</Text>
+          </Pressable>
+        </View>
+
+        <Text style={[styles.subtitle, { color: colors.text, marginTop: 20 }]}>Қарпі өлшемі (Font Size):</Text>
+        <View style={styles.fontRow}>
+          {(['small', 'normal', 'large'] as FontScaleType[]).map(scale => (
+            <Pressable
+              key={scale}
+              style={[
+                styles.fontBtn,
+                { backgroundColor: fontScale === scale ? colors.primary : colors.cardBg }
+              ]}
+              onPress={() => setFontScale(scale)}
+            >
+              <Text style={{ color: fontScale === scale ? '#FFF' : colors.text, fontWeight: '700' }}>
+                {scale === 'small' ? 'Кіші' : scale === 'normal' ? 'Орташа' : 'Үлкен'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
 
 function DetailsScreen({ route, navigation }: any) {
   const { serviceId, title } = route.params || {};
+  const { colors }: any = useSettings();
+
+  const getDetailedInfo = (id: string) => {
+    switch (id) {
+      case 'lib-01':
+        return 'Кітапхана қоры соңғы үлгідегі оқулықтармен толықтырылған. Абонемент бөлімі мен электронды оқу залы апта сайын дүйсенбіден сенбіге дейін жұмыс істейді.';
+      case 'sch-02':
+        return 'Сабақ кестесі ағымдағы академиялық күнтізбеге сай құрылған. Дәрістер мен зертханалық жұмыстардың уақытын өз тобыңыздың парақшасынан көре аласыз.';
+      case 'dorm-03':
+        return 'Студенттер үйінде тұру ережелері мен төлем кестесі деканат тарапынан қадағаланады. Барлық сұрақтар бойынша комендантқа хабарласыңыз.';
+      case 'trans-03':
+        return 'Автобустар таңғы сағат 08:00-ден кешкі 19:00-ге дейін үздіксіз қатынаиды. Жолақы студенттік билет арқылы тегін немесе жеңілдетілген тарифпен жүзеге асады.';
+      case 'med-04':
+        return 'Медициналық пунктте қажетті алғашқы көмек көрсетіліп, флюорография және вакцинация туралы анықтамалар беріледі.';
+      default:
+        return 'Бұл сервис бойынша қосымша ақпарат жуырда жарияланады.';
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.container}>
-        <Text style={styles.title}>{title || 'Толық ақпарат'}</Text>
-        <Text style={styles.subtitle}>Сервис ID: {serviceId}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{title || 'Толық ақпарат'}</Text>
+        <Text style={[styles.subtitle, { color: colors.subText }]}>Сервис ID: {serviceId}</Text>
+        <Text style={[styles.cardDesc, { color: colors.text, fontSize: 16, lineHeight: 22, marginBottom: 20 }]}>
+          {getDetailedInfo(serviceId)}
+        </Text>
         
         <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.buttonText}>Артқа қайту</Text>
@@ -171,30 +279,30 @@ function DetailsScreen({ route, navigation }: any) {
   );
 }
 
-
 function MainTabs() {
   return (
     <Tab.Navigator screenOptions={{ headerShown: false }}>
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Басты бет' }} />
       <Tab.Screen name="Services" component={ServicesScreen} options={{ title: 'Сервистер' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Профиль' }} />
+      <Tab.Screen name="Settings" component={SettingsScreen} options={{ title: 'Баптаулар' }} />
     </Tab.Navigator>
   );
 }
 
-
 export default function App() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Login">
-        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
-        <Stack.Screen name="Details" component={DetailsScreen} options={{ title: 'Мәліметтер' }} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <SettingsProvider>
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName="Login">
+          <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+          <Stack.Screen name="Details" component={DetailsScreen} options={{ title: 'Мәліметтер' }} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </SettingsProvider>
   );
 }
-
 
 const styles = StyleSheet.create({
   screen: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: '#0B66E4' },
@@ -209,16 +317,22 @@ const styles = StyleSheet.create({
   loginButton: { backgroundColor: '#0B66E4', padding: 16, borderRadius: 12, marginTop: 6 },
   buttonText: { color: '#FFFFFF', textAlign: 'center', fontWeight: '700', fontSize: 16 },
   
-  safeArea: { flex: 1, backgroundColor: '#F4F8FC' },
+  safeArea: { flex: 1 },
   container: { padding: 20, flex: 1 },
-  welcome: { fontSize: 16, fontWeight: '600', color: '#0B66E4', marginBottom: 4 },
-  title: { fontSize: 26, fontWeight: '800', color: '#092B55', marginBottom: 8 },
-  subtitle: { fontSize: 15, color: '#60758A', marginBottom: 20 },
+  welcome: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
+  title: { fontSize: 26, fontWeight: '800', marginBottom: 8 },
+  subtitle: { fontSize: 15, marginBottom: 20 },
   
-  cardButton: { backgroundColor: '#FFFFFF', padding: 18, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' },
-  cardTitle: { fontSize: 18, fontWeight: '700', color: '#092B55', marginBottom: 4 },
-  cardDesc: { fontSize: 14, color: '#64748B' },
+  cardButton: { padding: 18, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' },
+  cardTitle: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
+  cardDesc: { fontSize: 14 },
 
   logoutButton: { backgroundColor: '#D9342B', padding: 16, borderRadius: 12, marginTop: 20 },
   backButton: { backgroundColor: '#60758A', padding: 16, borderRadius: 12, marginTop: 20 },
+
+  settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderRadius: 12, marginBottom: 12 },
+  settingLabel: { fontSize: 16, fontWeight: '600' },
+  smallBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
+  fontRow: { flexDirection: 'row', gap: 10 },
+  fontBtn: { flex: 1, padding: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#C7D7E8' }
 });
