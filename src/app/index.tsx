@@ -1,8 +1,12 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Button,
+  FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,11 +21,12 @@ import {
 type ThemeType = 'light' | 'dark';
 type FontScaleType = 'small' | 'normal' | 'large';
 
-const SettingsContext = createContext({
-  theme: 'light' as ThemeType,
+const SettingsContext = createContext<any>({
+  theme: 'light',
   toggleTheme: () => {},
-  fontScale: 'normal' as FontScaleType,
-  setFontScale: (scale: FontScaleType) => {},
+  fontScale: 'normal',
+  setFontScale: () => {},
+  colors: {}
 });
 
 function SettingsProvider({ children }: { children: React.ReactNode }) {
@@ -35,13 +40,70 @@ function SettingsProvider({ children }: { children: React.ReactNode }) {
     : { background: '#121212', cardBg: '#1E1E1E', text: '#FFFFFF', subText: '#A0A0A0', primary: '#3B82F6' };
 
   return (
-    <SettingsContext.Provider value={{ theme, toggleTheme, fontScale, setFontScale, colors } as any}>
+    <SettingsContext.Provider value={{ theme, toggleTheme, fontScale, setFontScale, colors }}>
       {children}
     </SettingsContext.Provider>
   );
 }
 
 const useSettings = () => useContext(SettingsContext);
+
+// --- ВСЕ 4 ҚАЗАҚША ЖАҢАЛЫҚ (Имитация API) ---
+export type Announcement = {
+  id: number;
+  title: string;
+  body: string;
+  image: string;
+  date: string;
+};
+
+const KAZAKH_ANNOUNCEMENTS: Announcement[] = [
+  {
+    id: 1,
+    title: 'Университетте жаңа IT зертханасы ашылды',
+    body: 'Студенттер заманауи компьютерлермен, робототехника және жасанды интеллект құрылғыларымен жабдықталған жаңа зертханада тегін жұмыс істей алады. Зертхана аптаның жұмыс күндері сағат 09:00-ден 18:00-ге дейін ашық.',
+    image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600',
+    date: '19 қазан, 2026'
+  },
+  {
+    id: 2,
+    title: 'Халықаралық академиялық ұтқырлық бағдарламасы басталады',
+    body: 'Бакалавриат студенттері келесі семестрді Еуропаның жетекші университеттерінде грант негізінде оқып қайтуға өтініш бере алады. Құжаттарды қабылдау 1-қарашаға дейін халықаралық бөлімде жүргізіледі.',
+    image: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=600',
+    date: '18 қазан, 2026'
+  },
+  {
+    id: 3,
+    title: 'Студенттер арасындағы "Campus Hackathon 2026"',
+    body: 'Алдағы демалыс күндері бағдарламалау бойынша дәстүрлі хакатон өтеді. Жеңімпаздарға бағалы сыйлықтар мен серіктес IT компаниялардан стажировка мүмкіндігі ұсынылады.',
+    image: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=600',
+    date: '15 қазан, 2026'
+  },
+  {
+    id: 4,
+    title: 'Кітапхана қоры жаңа оқулықтармен толықты',
+    body: 'Пәнаралық бағыттағы 500-ден астам шетелдік және отандық әдебиеттер оқу залына жеткізілді. Электронды каталог арқылы кітаптарды алдын ала броньдауға болады.',
+    image: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=600',
+    date: '12 қазан, 2026'
+  }
+];
+
+export async function fetchAnnouncements(): Promise<Announcement[]> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(KAZAKH_ANNOUNCEMENTS);
+    }, 300);
+  });
+}
+
+async function fetchSingleAnnouncement(id: number): Promise<Announcement | undefined> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const item = KAZAKH_ANNOUNCEMENTS.find(a => a.id === Number(id));
+      resolve(item);
+    }, 200);
+  });
+}
 
 export type RootStackParamList = {
   Login: undefined;
@@ -50,10 +112,14 @@ export type RootStackParamList = {
     serviceId: string;
     title: string;
   };
+  NewsDetails: {
+    announcementId: number;
+  };
   Settings: undefined;
 };
 
 export type MainTabParamList = {
+  News: undefined;
   Home: undefined;
   Services: undefined;
   Profile: undefined;
@@ -117,6 +183,127 @@ function LoginScreen({ navigation }: any) {
   );
 }
 
+// --- ЖАҢАЛЫҚТАР ЭКРАНЫ (Барлық 4 жаңалық шығады) ---
+function NewsScreen({ navigation }: any) {
+  const { colors, fontScale }: any = useSettings();
+  const mult = fontScale === 'small' ? 0.85 : fontScale === 'large' ? 1.25 : 1.0;
+
+  const [items, setItems] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadData = async () => {
+    try {
+      setError(null);
+      const data = await fetchAnnouncements();
+      setItems(data);
+    } catch (e) {
+      setError('Деректерді жүктеу мүмкін болмады');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <Text style={[{ color: colors.text, marginBottom: 10, fontSize: 16 * mult }]}>{error}</Text>
+        <Button title="Қайталау" onPress={loadData} />
+      </View>
+    );
+  }
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadData();
+  };
+
+  return (
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <View style={styles.container}>
+        <Text style={[styles.title, { color: colors.text, fontSize: 26 * mult }]}>Кампус Жаңалықтары</Text>
+        <FlatList
+          data={items}
+          keyExtractor={(item) => item.id.toString()}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          renderItem={({ item }) => (
+            <Pressable 
+              style={[styles.newsCard, { backgroundColor: colors.cardBg }]}
+              onPress={() => navigation.navigate('NewsDetails', { announcementId: item.id })}
+            >
+              <Image source={{ uri: item.image }} style={styles.newsImage} />
+              <View style={styles.newsContent}>
+                <Text style={[styles.newsDate, { color: colors.primary }]}>{item.date}</Text>
+                <Text style={[styles.cardTitle, { color: colors.text, fontSize: 18 * mult }]}>{item.title}</Text>
+                <Text numberOfLines={2} style={[styles.cardDesc, { color: colors.subText, fontSize: 14 * mult }]}>{item.body}</Text>
+              </View>
+            </Pressable>
+          )}
+        />
+      </View>
+    </SafeAreaView>
+  );
+}
+
+function NewsDetailsScreen({ route, navigation }: any) {
+  const { announcementId } = route.params || {};
+  const { colors, fontScale }: any = useSettings();
+  const mult = fontScale === 'small' ? 0.85 : fontScale === 'large' ? 1.25 : 1.0;
+
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchSingleAnnouncement(announcementId)
+      .then(data => {
+        if (data) setAnnouncement(data);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [announcementId]);
+
+  if (loading) {
+    return (
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <ScrollView contentContainerStyle={styles.container}>
+        {announcement?.image && (
+          <Image source={{ uri: announcement.image }} style={styles.detailImage} />
+        )}
+        <Text style={[styles.newsDate, { color: colors.primary, marginTop: 10 }]}>{announcement?.date}</Text>
+        <Text style={[styles.title, { color: colors.text, fontSize: 24 * mult, marginTop: 4 }]}>{announcement?.title}</Text>
+        <Text style={[styles.cardDesc, { color: colors.text, fontSize: 16 * mult, lineHeight: 24, marginTop: 15 }]}>
+          {announcement?.body}
+        </Text>
+        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Text style={[styles.buttonText, { fontSize: 16 * mult }]}>Артқа қайту</Text>
+        </Pressable>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
 function HomeScreen({ navigation }: any) {
   const { colors, fontScale }: any = useSettings();
   const titleSize = fontScale === 'small' ? 22 : fontScale === 'large' ? 30 : 26;
@@ -125,7 +312,7 @@ function HomeScreen({ navigation }: any) {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={[styles.welcome, { color: colors.primary }]}>Қош келдіңіз, студент!</Text>
-        <Text style={[styles.title, { color: colors.text, fontSize: titleSize }]}>Кампус сервистері мен жаңалықтар</Text>
+        <Text style={[styles.title, { color: colors.text, fontSize: titleSize }]}>Кампус сервистері</Text>
         <Text style={[styles.subtitle, { color: colors.subText }]}>Толығырақ оқу үшін карточканы басыңыз</Text>
 
         <Pressable 
@@ -133,23 +320,7 @@ function HomeScreen({ navigation }: any) {
           onPress={() => navigation.navigate('Details', { serviceId: 'lib-01', title: 'Кітапхана қызметі' })}
         >
           <Text style={[styles.cardTitle, { color: colors.text }]}>Кітапхана қоры және оқу залдары</Text>
-          <Text style={[styles.cardDesc, { color: colors.subText }]}>Жұмыс уақыты: 09:00 - 20:00. Қолда 15 000-нан астам оқулықтар мен электронды базалар қолжетімді.</Text>
-        </Pressable>
-
-        <Pressable 
-          style={[styles.cardButton, { backgroundColor: colors.cardBg }]}
-          onPress={() => navigation.navigate('Details', { serviceId: 'sch-02', title: 'Академиялық кесте' })}
-        >
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Сабақтар кестесі мен аудиториялар</Text>
-          <Text style={[styles.cardDesc, { color: colors.subText }]}>Ағымдағы семестрдің дәріс және тәжірибелік сабақтарының кестесі жаңартылды.</Text>
-        </Pressable>
-
-        <Pressable 
-          style={[styles.cardButton, { backgroundColor: colors.cardBg }]}
-          onPress={() => navigation.navigate('Details', { serviceId: 'dorm-03', title: 'Жатқана хабарламасы' })}
-        >
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Студенттер үйі (Жатқана)</Text>
-          <Text style={[styles.cardDesc, { color: colors.subText }]}>Тіркелу шарттары, төлем ақы және коменданттык сағат ережелерімен танысыңыз.</Text>
+          <Text style={[styles.cardDesc, { color: colors.subText }]}>Жұмыс уақыты: 09:00 - 20:00.</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -162,21 +333,12 @@ function ServicesScreen({ navigation }: any) {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={[styles.title, { color: colors.text }]}>Қосымша сервистер</Text>
-        
         <Pressable 
           style={[styles.cardButton, { backgroundColor: colors.cardBg }]}
           onPress={() => navigation.navigate('Details', { serviceId: 'trans-03', title: 'Кампус автобусы' })}
         >
           <Text style={[styles.cardTitle, { color: colors.text }]}>Кампус аралық автобус</Text>
-          <Text style={[styles.cardDesc, { color: colors.subText }]}>№1 және №4 маршруттар әр 15 минут сайын бас корпус пен жатқана арасында қатынаиды.</Text>
-        </Pressable>
-
-        <Pressable 
-          style={[styles.cardButton, { backgroundColor: colors.cardBg }]}
-          onPress={() => navigation.navigate('Details', { serviceId: 'med-04', title: 'Медициналық пункт' })}
-        >
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Студенттік емхана</Text>
-          <Text style={[styles.cardDesc, { color: colors.subText }]}>№3 корпус, 102 кабинет. Алғашқы медициналық көмек және анықтамалар беру.</Text>
+          <Text style={[styles.cardDesc, { color: colors.subText }]}>№1 және №4 маршруттар әр 15 минут сайын жүреді.</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -191,12 +353,8 @@ function ProfileScreen({ navigation }: any) {
         <Text style={[styles.title, { color: colors.text }]}>Студент Профилі</Text>
         <Text style={[styles.subtitle, { color: colors.subText }]}>Аты-жөні: Әлемжан Б.</Text>
         <Text style={[styles.subtitle, { color: colors.subText }]}>Тобы: УС-ПИ-25-1к</Text>
-        <Text style={[styles.subtitle, { color: colors.subText }]}>Электронды пошта: alemzhan.b@university.edu</Text>
 
-        <Pressable 
-          style={styles.logoutButton} 
-          onPress={() => navigation.replace('Login')}
-        >
+        <Pressable style={styles.logoutButton} onPress={() => navigation.replace('Login')}>
           <Text style={styles.buttonText}>Жүйеден шығу (Log Out)</Text>
         </Pressable>
       </View>
@@ -205,36 +363,17 @@ function ProfileScreen({ navigation }: any) {
 }
 
 function SettingsScreen() {
-  const { theme, toggleTheme, fontScale, setFontScale, colors }: any = useSettings();
+  const { theme, toggleTheme, colors }: any = useSettings();
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.container}>
         <Text style={[styles.title, { color: colors.text }]}>Қолданба баптаулары</Text>
-
         <View style={[styles.settingRow, { backgroundColor: colors.cardBg }]}>
-          <Text style={[styles.settingLabel, { color: colors.text }]}>Қараңғы тақырып (Dark Theme)</Text>
+          <Text style={[styles.settingLabel, { color: colors.text }]}>Қараңғы тақырып</Text>
           <Pressable style={[styles.smallBtn, { backgroundColor: colors.primary }]} onPress={toggleTheme}>
             <Text style={styles.buttonText}>{theme === 'light' ? 'Қосу' : 'Өшіру'}</Text>
           </Pressable>
-        </View>
-
-        <Text style={[styles.subtitle, { color: colors.text, marginTop: 20 }]}>Қарпі өлшемі (Font Size):</Text>
-        <View style={styles.fontRow}>
-          {(['small', 'normal', 'large'] as FontScaleType[]).map(scale => (
-            <Pressable
-              key={scale}
-              style={[
-                styles.fontBtn,
-                { backgroundColor: fontScale === scale ? colors.primary : colors.cardBg }
-              ]}
-              onPress={() => setFontScale(scale)}
-            >
-              <Text style={{ color: fontScale === scale ? '#FFF' : colors.text, fontWeight: '700' }}>
-                {scale === 'small' ? 'Кіші' : scale === 'normal' ? 'Орташа' : 'Үлкен'}
-              </Text>
-            </Pressable>
-          ))}
         </View>
       </View>
     </SafeAreaView>
@@ -245,32 +384,13 @@ function DetailsScreen({ route, navigation }: any) {
   const { serviceId, title } = route.params || {};
   const { colors }: any = useSettings();
 
-  const getDetailedInfo = (id: string) => {
-    switch (id) {
-      case 'lib-01':
-        return 'Кітапхана қоры соңғы үлгідегі оқулықтармен толықтырылған. Абонемент бөлімі мен электронды оқу залы апта сайын дүйсенбіден сенбіге дейін жұмыс істейді.';
-      case 'sch-02':
-        return 'Сабақ кестесі ағымдағы академиялық күнтізбеге сай құрылған. Дәрістер мен зертханалық жұмыстардың уақытын өз тобыңыздың парақшасынан көре аласыз.';
-      case 'dorm-03':
-        return 'Студенттер үйінде тұру ережелері мен төлем кестесі деканат тарапынан қадағаланады. Барлық сұрақтар бойынша комендантқа хабарласыңыз.';
-      case 'trans-03':
-        return 'Автобустар таңғы сағат 08:00-ден кешкі 19:00-ге дейін үздіксіз қатынаиды. Жолақы студенттік билет арқылы тегін немесе жеңілдетілген тарифпен жүзеге асады.';
-      case 'med-04':
-        return 'Медициналық пунктте қажетті алғашқы көмек көрсетіліп, флюорография және вакцинация туралы анықтамалар беріледі.';
-      default:
-        return 'Бұл сервис бойынша қосымша ақпарат жуырда жарияланады.';
-    }
-  };
-
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.container}>
         <Text style={[styles.title, { color: colors.text }]}>{title || 'Толық ақпарат'}</Text>
-        <Text style={[styles.subtitle, { color: colors.subText }]}>Сервис ID: {serviceId}</Text>
-        <Text style={[styles.cardDesc, { color: colors.text, fontSize: 16, lineHeight: 22, marginBottom: 20 }]}>
-          {getDetailedInfo(serviceId)}
+        <Text style={[styles.cardDesc, { color: colors.text, fontSize: 16, marginBottom: 20 }]}>
+          Сервис ID: {serviceId}
         </Text>
-        
         <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.buttonText}>Артқа қайту</Text>
         </Pressable>
@@ -282,6 +402,7 @@ function DetailsScreen({ route, navigation }: any) {
 function MainTabs() {
   return (
     <Tab.Navigator screenOptions={{ headerShown: false }}>
+      <Tab.Screen name="News" component={NewsScreen} options={{ title: 'Жаңалықтар' }} />
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Басты бет' }} />
       <Tab.Screen name="Services" component={ServicesScreen} options={{ title: 'Сервистер' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Профиль' }} />
@@ -298,6 +419,7 @@ export default function App() {
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
           <Stack.Screen name="Details" component={DetailsScreen} options={{ title: 'Мәліметтер' }} />
+          <Stack.Screen name="NewsDetails" component={NewsDetailsScreen} options={{ title: 'Хабарландыру' }} />
         </Stack.Navigator>
       </NavigationContainer>
     </SettingsProvider>
@@ -319,20 +441,26 @@ const styles = StyleSheet.create({
   
   safeArea: { flex: 1 },
   container: { padding: 20, flex: 1 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   welcome: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
   title: { fontSize: 26, fontWeight: '800', marginBottom: 8 },
   subtitle: { fontSize: 15, marginBottom: 20 },
   
+  newsCard: { borderRadius: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' },
+  newsImage: { width: '100%', height: 160 },
+  newsContent: { padding: 14 },
+  newsDate: { fontSize: 12, fontWeight: '700', marginBottom: 4 },
+  
+  detailImage: { width: '100%', height: 220, borderRadius: 16 },
+
   cardButton: { padding: 18, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' },
   cardTitle: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
   cardDesc: { fontSize: 14 },
 
   logoutButton: { backgroundColor: '#D9342B', padding: 16, borderRadius: 12, marginTop: 20 },
-  backButton: { backgroundColor: '#60758A', padding: 16, borderRadius: 12, marginTop: 20 },
+  backButton: { backgroundColor: '#60758A', padding: 16, borderRadius: 12, marginTop: 20, alignItems: 'center' },
 
   settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderRadius: 12, marginBottom: 12 },
   settingLabel: { fontSize: 16, fontWeight: '600' },
-  smallBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
-  fontRow: { flexDirection: 'row', gap: 10 },
-  fontBtn: { flex: 1, padding: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#C7D7E8' }
+  smallBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 }
 });
