@@ -1,6 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View } from 'react-native';
 import { HomeScreen } from '../screens/HomeScreen';
+import NewsScreen from '../screens/NewsScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { MainTabParamList } from '../types/navigation';
@@ -18,6 +19,7 @@ function ServicesPlaceholder() {
 export function MainTabs() {
   return (
     <Tab.Navigator screenOptions={{ headerShown: false }}>
+      <Tab.Screen name="News" component={NewsScreen as any} options={{ title: 'Жаңалықтар' }} />
       <Tab.Screen name="Home" component={HomeScreen as any} options={{ title: 'Басты бет' }} />
       <Tab.Screen name="Services" component={ServicesPlaceholder} options={{ title: 'Сервистер' }} />
       <Tab.Screen name="Profile" component={ProfileScreen as any} options={{ title: 'Профиль' }} />
